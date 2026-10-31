@@ -37,7 +37,15 @@ jobs:
       - name: Tests + APK release
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        run: ./gradlew --no-daemon testDebugUnitTest assembleRelease
+        run: |
+          set -o pipefail
+          if ! ./gradlew --no-daemon --console=plain testDebugUnitTest assembleRelease 2>&1 | tee build.log; then
+            # Errores visibles como annotations (los logs completos requieren login)
+            grep -E "^e: |error:|What went wrong|FAILED|Exception|> " build.log | head -40 | while IFS= read -r line; do
+              echo "::error::${line//%/%25}"
+            done
+            exit 1
+          fi
 
       - name: Nombrar APK con la versión
         run: |
